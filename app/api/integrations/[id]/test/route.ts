@@ -5,15 +5,16 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = getSupabaseClient();
 
     const { data: integration, error: fetchError } = await supabase
       .from('integrations')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (fetchError || !integration) {
@@ -56,7 +57,7 @@ export async function POST(
 
       await supabase.from('integration_logs').insert([
         {
-          integration_id: params.id,
+          integration_id: id,
           event_type: 'test',
           payload: testPayload,
           status,
@@ -71,7 +72,7 @@ export async function POST(
       await supabase
         .from('integrations')
         .update({ last_triggered_at: new Date().toISOString() })
-        .eq('id', params.id);
+        .eq('id', id);
 
       console.log(`Integration test ${status} for ${integration.name}`);
 
@@ -82,7 +83,7 @@ export async function POST(
     } catch (webhookError: any) {
       await supabase.from('integration_logs').insert([
         {
-          integration_id: params.id,
+          integration_id: id,
           event_type: 'test',
           payload: testPayload,
           status: 'error',
